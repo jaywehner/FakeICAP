@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Access Pending - FakeICAP{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-8 col-lg-6">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="bi bi-lock-fill me-2"></i>Access Pending Approval</h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-3">
+                    Your account has been created but does not yet have an assigned role.
+                </p>
+                <p class="mb-3">
+                    An administrator must review your account and assign an appropriate role before you
+                    can access the dashboard, logs, or files.
+                </p>
+                <p class="mb-3 text-muted small">
+                    If you believe this is an error, please contact your system administrator.
+                </p>
+                <div class="d-flex justify-content-end">
+                    <a href="{{ url_for('logout') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-box-arrow-right me-2"></i>Logout
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -10,6 +10,49 @@
     </button>
 </div>
 
+<!-- Edit User Modal -->
+<div class="modal fade" id="editUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-pencil me-2"></i>Edit User</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" id="editUserForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="edit_username" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="edit_username" name="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_role" class="form-label">Role</label>
+                        <select class="form-select" id="edit_role" name="role">
+                            <option value="FULL_ACCESS">Full Access</option>
+                            <option value="LOG_VIEWER">Log Viewer</option>
+                            <option value="FILE_DOWNLOAD">File Download</option>
+                            <option value="NO_ACCESS">No Access (Pending Approval)</option>
+                        </select>
+                        <div class="form-text">Admins always have full access regardless of this setting.</div>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="edit_is_admin" name="is_admin">
+                        <label class="form-check-label" for="edit_is_admin">
+                            Administrator privileges
+                        </label>
+                        <div class="form-text" id="editAdminHelp"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save me-2"></i>Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- Users Table -->
 <div class="card">
     <div class="card-header">
@@ -43,15 +86,25 @@
                             </div>
                         </td>
                         <td>
-                            {% if user.is_admin %}
-                                <span class="badge bg-danger">Administrator</span>
+                            {% if user.role == 'ADMIN' %}
+                                <span class="badge bg-danger">{{ user.role_label }}</span>
+                            {% elif user.role == 'FULL_ACCESS' %}
+                                <span class="badge bg-primary">{{ user.role_label }}</span>
+                            {% elif user.role == 'LOG_VIEWER' %}
+                                <span class="badge bg-info text-dark">{{ user.role_label }}</span>
+                            {% elif user.role == 'FILE_DOWNLOAD' %}
+                                <span class="badge bg-secondary">{{ user.role_label }}</span>
+                            {% elif user.role == 'NO_ACCESS' %}
+                                <span class="badge bg-warning text-dark">{{ user.role_label }}</span>
                             {% else %}
-                                <span class="badge bg-primary">User</span>
+                                <span class="badge bg-primary">{{ user.role_label }}</span>
                             {% endif %}
                         </td>
                         <td>
                             {% if user.must_change_password %}
                                 <span class="badge bg-warning">Password Change Required</span>
+                            {% elif user.role == 'NO_ACCESS' %}
+                                <span class="badge bg-secondary">Pending Approval</span>
                             {% else %}
                                 <span class="badge bg-success">Active</span>
                             {% endif %}
@@ -66,6 +119,19 @@
                         </td>
                         <td>
                             <div class="btn-group" role="group">
+                                <!-- Edit user (username/role) -->
+                                <button class="btn btn-sm btn-outline-secondary"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#editUserModal"
+                                        data-user-id="{{ user.id }}"
+                                        data-username="{{ user.username }}"
+                                        data-is-admin="{{ 1 if user.is_admin else 0 }}"
+                                        data-is-default-admin="{{ 1 if user.is_default_admin else 0 }}"
+                                        data-role="{{ user.role }}"
+                                        onclick="setEditUserFromButton(this)">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <!-- Reset password -->
                                 <button class="btn btn-sm btn-outline-primary" 
                                         data-bs-toggle="modal" 
                                         data-bs-target="#resetPasswordModal"
@@ -73,6 +139,7 @@
                                     <i class="bi bi-key"></i>
                                 </button>
                                 {% if not user.is_default_admin %}
+                                <!-- Delete user (not allowed for default admin) -->
                                 <button class="btn btn-sm btn-outline-danger" 
                                         onclick="deleteUser({{ user.id }}, '{{ user.username|e }}')">
                                     <i class="bi bi-trash"></i>
@@ -84,6 +151,94 @@
                     {% endfor %}
                 </tbody>
             </table>
+        </div>
+    </div>
+</div>
+
+<!-- Password Policy Configuration -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-shield-lock me-2"></i>Password Policy</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('update_settings') }}">
+            <div class="row">
+                <div class="col-md-4 col-lg-2">
+                    <div class="mb-3">
+                        <label for="password_min_length" class="form-label">Minimum Length</label>
+                        <input type="number" class="form-control" id="password_min_length" name="password_min_length"
+                               value="{{ settings.password_min_length or '6' }}" min="0" max="128" required>
+                        <div class="form-text">0 disables length requirement.</div>
+                    </div>
+                </div>
+                <div class="col-md-4 col-lg-2">
+                    <div class="mb-3">
+                        <label for="password_min_uppercase" class="form-label">Uppercase</label>
+                        <input type="number" class="form-control" id="password_min_uppercase" name="password_min_uppercase"
+                               value="{{ settings.password_min_uppercase or '0' }}" min="0" max="64" required>
+                        <div class="form-text">Minimum uppercase letters.</div>
+                    </div>
+                </div>
+                <div class="col-md-4 col-lg-2">
+                    <div class="mb-3">
+                        <label for="password_min_lowercase" class="form-label">Lowercase</label>
+                        <input type="number" class="form-control" id="password_min_lowercase" name="password_min_lowercase"
+                               value="{{ settings.password_min_lowercase or '0' }}" min="0" max="64" required>
+                        <div class="form-text">Minimum lowercase letters.</div>
+                    </div>
+                </div>
+                <div class="col-md-4 col-lg-2">
+                    <div class="mb-3">
+                        <label for="password_min_digits" class="form-label">Digits</label>
+                        <input type="number" class="form-control" id="password_min_digits" name="password_min_digits"
+                               value="{{ settings.password_min_digits or '0' }}" min="0" max="64" required>
+                        <div class="form-text">Minimum numeric digits.</div>
+                    </div>
+                </div>
+                <div class="col-md-4 col-lg-2">
+                    <div class="mb-3">
+                        <label for="password_min_special" class="form-label">Special</label>
+                        <input type="number" class="form-control" id="password_min_special" name="password_min_special"
+                               value="{{ settings.password_min_special or '0' }}" min="0" max="64" required>
+                        <div class="form-text">Minimum special characters.</div>
+                    </div>
+                </div>
+                <div class="col-md-12 col-lg-4">
+                    <div class="mb-3">
+                        <label for="password_allowed_specials" class="form-label">Allowed Special Characters</label>
+                        <input type="text" class="form-control" id="password_allowed_specials" name="password_allowed_specials"
+                               value="{{ settings.password_allowed_specials or '!@#$%^&*()-_=+[]{};:,.<>/?' }}">
+                        <div class="form-text">
+                            Characters considered "special" for the policy above. Leave blank to disable special checks unless minimum is > 0.
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="registration_enabled" name="registration_enabled"
+                               {% if settings.registration_enabled == '1' %}checked{% endif %}>
+                        <label class="form-check-label" for="registration_enabled">
+                            Allow users to self-register accounts
+                        </label>
+                        <div class="form-text">
+                            When enabled, users can access the Register page to create their own non-admin accounts.
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex gap-2 mt-3">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-save me-2"></i>Save Policy &amp; Registration Settings
+                </button>
+                <button type="button" class="btn btn-outline-secondary" onclick="location.reload()">
+                    <i class="bi bi-arrow-clockwise me-2"></i>Reset
+                </button>
+            </div>
+        </form>
+        <div class="mt-2">
+            <small class="text-muted">A value of 0 for any counter disables that specific requirement.</small>
         </div>
     </div>
 </div>
@@ -112,6 +267,16 @@
                         <label for="confirm_new_password" class="form-label">Confirm Password</label>
                         <input type="password" class="form-control" id="confirm_new_password" 
                                required minlength="6">
+                    </div>
+                    <div class="mb-3">
+                        <label for="new_role" class="form-label">Role</label>
+                        <select class="form-select" id="new_role" name="role">
+                            <option value="FULL_ACCESS">Full Access</option>
+                            <option value="LOG_VIEWER">Log Viewer</option>
+                            <option value="FILE_DOWNLOAD">File Download</option>
+                            <option value="NO_ACCESS">No Access (Pending Approval)</option>
+                        </select>
+                        <div class="form-text">Admins always have full access regardless of this setting.</div>
                     </div>
                     <div class="mb-3 form-check">
                         <input type="checkbox" class="form-check-input" id="is_admin" name="is_admin">
@@ -179,6 +344,47 @@
 
 {% block extra_js %}
 <script>
+function setEditUserFromButton(button) {
+    const userId = parseInt(button.getAttribute('data-user-id'), 10);
+    const username = button.getAttribute('data-username') || '';
+    const isAdmin = button.getAttribute('data-is-admin') === '1';
+    const isDefaultAdmin = button.getAttribute('data-is-default-admin') === '1';
+    const role = button.getAttribute('data-role') || 'FULL_ACCESS';
+    setEditUser(userId, username, isAdmin, isDefaultAdmin, role);
+}
+
+function setEditUser(userId, username, isAdmin, isDefaultAdmin, role) {
+    const form = document.getElementById('editUserForm');
+    form.action = `/edit_user/${userId}`;
+    document.getElementById('edit_username').value = username;
+    const adminCheckbox = document.getElementById('edit_is_admin');
+    const helpText = document.getElementById('editAdminHelp');
+    const roleSelect = document.getElementById('edit_role');
+
+    // Normalize role value
+    const normalizedRole = (role || 'FULL_ACCESS').toUpperCase();
+
+    if (isDefaultAdmin) {
+        // Default admin must always stay admin
+        adminCheckbox.checked = true;
+        adminCheckbox.disabled = true;
+        helpText.textContent = 'Default admin must always retain administrator privileges.';
+        if (roleSelect) {
+            roleSelect.value = 'ADMIN';
+            roleSelect.disabled = true;
+        }
+    } else {
+        adminCheckbox.checked = !!isAdmin;
+        adminCheckbox.disabled = false;
+        helpText.textContent = '';
+        if (roleSelect) {
+            roleSelect.disabled = false;
+            const validRoles = ['FULL_ACCESS', 'LOG_VIEWER', 'FILE_DOWNLOAD', 'NO_ACCESS'];
+            roleSelect.value = validRoles.includes(normalizedRole) ? normalizedRole : 'FULL_ACCESS';
+        }
+    }
+}
+
 function setResetUser(userId, username) {
     document.getElementById('reset_user_id').value = userId;
     document.getElementById('reset_username_display').textContent = username;

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="light">
+<html lang="en" data-bs-theme="{{ ui_theme|default('light') }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -251,17 +251,31 @@
 
         <!-- Main Content -->
     {% if 'user_id' in session %}
+    {% set role = session.get('role') or 'FULL_ACCESS' %}
+    {% set is_admin = session.get('is_admin') %}
     <!-- Navigation Links -->
     <div class="nav-links">
         <a class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}" href="{{ url_for('dashboard') }}">
             <i class="bi bi-speedometer2 me-1"></i>Dashboard
         </a>
+        {% if is_admin or role in ['FULL_ACCESS', 'LOG_VIEWER'] %}
         <a class="nav-link {% if request.endpoint == 'logs' %}active{% endif %}" href="{{ url_for('logs') }}">
             <i class="bi bi-file-text me-1"></i>Logs
         </a>
+        {% endif %}
+        {% if is_admin or role in ['FULL_ACCESS', 'FILE_DOWNLOAD'] %}
         <a class="nav-link {% if request.endpoint == 'processed_files' %}active{% endif %}" href="{{ url_for('processed_files') }}">
             <i class="bi bi-folder me-1"></i>Files
         </a>
+        {% endif %}
+        {% if session.get('is_admin') %}
+        <a class="nav-link {% if request.endpoint == 'settings_page' %}active{% endif %}" href="{{ url_for('settings_page') }}">
+            <i class="bi bi-gear me-1"></i>Settings
+        </a>
+        <a class="nav-link {% if request.endpoint == 'users' %}active{% endif %}" href="{{ url_for('users') }}">
+            <i class="bi bi-people me-1"></i>Users
+        </a>
+        {% endif %}
         <a class="nav-link {% if request.endpoint == 'change_password' %}active{% endif %}" href="{{ url_for('change_password') }}">
             <i class="bi bi-person me-1"></i>Account
         </a>
@@ -343,20 +357,23 @@
         html.setAttribute('data-bs-theme', newTheme);
         icon.className = newTheme === 'light' ? 'bi bi-moon-stars-fill' : 'bi bi-sun-fill';
         
-        // Save theme preference
-        localStorage.setItem('theme', newTheme);
+        // Theme toggle only affects the current session; global default comes from Settings.
     }
 
-    // Load saved theme
+    // Initialize theme and accent color from global settings
     document.addEventListener('DOMContentLoaded', function() {
-        const savedTheme = localStorage.getItem('theme') || 'light';
-        document.documentElement.setAttribute('data-bs-theme', savedTheme);
+        const html = document.documentElement;
+        const serverTheme = html.getAttribute('data-bs-theme') || 'light';
+        html.setAttribute('data-bs-theme', serverTheme);
+
         const icon = document.getElementById('theme-icon');
-        icon.className = savedTheme === 'light' ? 'bi bi-moon-stars-fill' : 'bi bi-sun-fill';
+        if (icon) {
+            icon.className = serverTheme === 'light' ? 'bi bi-moon-stars-fill' : 'bi bi-sun-fill';
+        }
         
-        // Apply accent color from settings or use localStorage fallback
-        const savedAccentColor = localStorage.getItem('accentColor') || 'orange';
-        applyAccentColor(savedAccentColor);
+        // Apply accent color from global settings
+        const serverAccentColor = '{{ ui_accent_color|default("orange") }}';
+        applyAccentColor(serverAccentColor || 'orange');
     });
 
     // Dynamic accent color management

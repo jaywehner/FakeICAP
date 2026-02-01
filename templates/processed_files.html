@@ -19,14 +19,8 @@
         <form method="GET" class="row g-3">
             <div class="col-md-4">
                 <label for="date" class="form-label">Date</label>
-                <select class="form-select" id="date" name="date" onchange="this.form.submit()">
-                    <option value="">All Dates</option>
-                    {% for date_info in dates %}
-                    <option value="{{ date_info.date_processed }}" {% if date_info.date_processed == selected_date %}selected{% endif %}>
-                        {{ date_info.date_processed }} ({{ date_info.file_count }} files)
-                    </option>
-                    {% endfor %}
-                </select>
+                <input type="date" class="form-control" id="date" name="date"
+                       value="{{ selected_date }}" onchange="this.form.submit()">
             </div>
             <div class="col-md-6">
                 <label for="search" class="form-label">Search Filename</label>
@@ -88,7 +82,8 @@
                         <td>
                             <div class="btn-group" role="group">
                                 <a href="{{ url_for('download_processed_file', file_id=file.id) }}" 
-                                   class="btn btn-sm btn-outline-success" title="Download File">
+                                   class="btn btn-sm btn-outline-success" title="Download File" 
+                                   download="{{ file.original_filename }}">
                                     <i class="bi bi-download"></i>
                                 </a>
                                 <button class="btn btn-sm btn-outline-info" 

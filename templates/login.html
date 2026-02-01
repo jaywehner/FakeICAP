@@ -52,18 +52,22 @@
                             </div>
                         </form>
                         
+                        {% if settings.registration_enabled == '1' %}
                         <div class="text-center mt-4">
                             <p class="mb-0">Don't have an account?</p>
                             <a href="{{ url_for('register') }}" class="btn btn-outline-primary btn-sm">
                                 <i class="bi bi-person-plus me-1"></i>Register New Account
                             </a>
                         </div>
+                        {% endif %}
                         
+                        {% if settings.show_default_credentials_hint|default('1') != '0' %}
                         <div class="mt-4 text-center">
                             <small class="text-muted">
                                 Default: admin / admin
                             </small>
                         </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>

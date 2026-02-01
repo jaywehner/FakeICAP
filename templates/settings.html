@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - FakeICAP{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-gear me-2"></i>Settings</h2>
+    <span class="text-muted small">Admin only</span>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-hdd-network me-2"></i>ICAP Server Settings</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('update_settings') }}">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="server_host" class="form-label">Server Host</label>
+                                <select class="form-select" id="server_host" name="server_host" required>
+                                    {% for host in server_hosts %}
+                                        <option value="{{ host }}" {% if host == settings.server_host %}selected{% endif %}>{{ host }}</option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text">IPv4 address to bind the ICAP server (0.0.0.0 = all interfaces).</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="server_port" class="form-label">Server Port</label>
+                                <input type="number" class="form-control" id="server_port" name="server_port"
+                                       value="{{ settings.server_port }}" min="1" max="65535" required>
+                                <div class="form-text">Port for ICAP server (default: 1344).</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="max_file_size" class="form-label">Max File Size (bytes)</label>
+                                <input type="number" class="form-control" id="max_file_size" name="max_file_size"
+                                       value="{{ settings.max_file_size }}" min="1024" required>
+                                <div class="form-text">Maximum file size to accept (default: 52428800 = 50MB).</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="file_timeout" class="form-label">File Timeout (seconds)</label>
+                                <input type="number" class="form-control" id="file_timeout" name="file_timeout"
+                                       value="{{ settings.file_timeout }}" min="5" max="300" required>
+                                <div class="form-text">Timeout for file reception (default: 15).</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="theme" class="form-label">Theme</label>
+                                <select class="form-select" id="theme" name="theme">
+                                    <option value="light" {% if settings.theme == 'light' %}selected{% endif %}>Light Mode</option>
+                                    <option value="dark" {% if settings.theme == 'dark' %}selected{% endif %}>Dark Mode</option>
+                                </select>
+                                <div class="form-text">Choose your preferred theme.</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="accent_color" class="form-label">Accent Color</label>
+                                <select class="form-select" id="accent_color" name="accent_color">
+                                    <option value="orange" {% if settings.accent_color == 'orange' %}selected{% endif %}>Orange</option>
+                                    <option value="blue" {% if settings.accent_color == 'blue' %}selected{% endif %}>Blue</option>
+                                    <option value="green" {% if settings.accent_color == 'green' %}selected{% endif %}>Green</option>
+                                    <option value="purple" {% if settings.accent_color == 'purple' %}selected{% endif %}>Purple</option>
+                                    <option value="red" {% if settings.accent_color == 'red' %}selected{% endif %}>Red</option>
+                                </select>
+                                <div class="form-text">Primary accent color for the interface.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save me-2"></i>Save Settings
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="location.reload()">
+                            <i class="bi bi-arrow-clockwise me-2"></i>Reset
+                        </button>
+                        <form method="POST" action="{{ url_for('restart_icap') }}" class="d-inline-block ms-auto"
+                              onsubmit="return confirm('Restart the ICAP server now? Active connections will be dropped.');">
+                            <button type="submit" class="btn btn-outline-danger">
+                                <i class="bi bi-arrow-repeat me-2"></i>Restart ICAP Server
+                            </button>
+                        </form>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- PGP File Encryption Settings -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="bi bi-lock me-2"></i>File Encryption (PGP)</h6>
+            </div>
+            <div class="card-body">
+                <p class="mb-2">PGP keys are generated and managed by the application. New files are encrypted
+                    with the current active key; older files continue to use the key that was active when they were
+                    processed.</p>
+
+                <dl class="row small mb-3">
+                    <dt class="col-sm-4">Current key fingerprint</dt>
+                    <dd class="col-sm-8">
+                        {% if pgp_status.active_fingerprint %}
+                            <code>{{ pgp_status.active_fingerprint }}</code>
+                        {% else %}
+                            <span class="text-muted">None (no key generated yet)</span>
+                        {% endif %}
+                    </dd>
+
+                    <dt class="col-sm-4">Current key created</dt>
+                    <dd class="col-sm-8">
+                        {% if pgp_status.created_at %}
+                            {{ pgp_status.created_at }}
+                        {% else %}
+                            <span class="text-muted">N/A</span>
+                        {% endif %}
+                    </dd>
+
+                    <dt class="col-sm-4">Total keys stored</dt>
+                    <dd class="col-sm-8">{{ pgp_status.total_keys }}</dd>
+
+                    <dt class="col-sm-4">Key storage</dt>
+                    <dd class="col-sm-8">
+                        {% if pgp_status.db_encrypted %}
+                            <span class="text-success">Encrypted at rest using server-side secret.</span>
+                        {% else %}
+                            <span class="text-warning">Keys are currently stored in plaintext. You can either set
+                                <code>FAKEICAP_KEY_SECRET</code> on the server, or initialize an application-managed
+                                encryption secret below.</span>
+                        {% endif %}
+                    </dd>
+                </dl>
+
+                {% if not pgp_status.db_encrypted %}
+                    <form method="POST" action="{{ url_for('init_db_encryption_secret') }}" class="mb-3"
+                          onsubmit="return confirm('Initialize a new encryption secret for storing PGP keys? This value will be stored in the database and cannot be recovered if lost.');">
+                        <button type="submit" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-key-fill me-2"></i>Initialize Encryption Secret
+                        </button>
+                    </form>
+                {% endif %}
+
+                <form method="POST" action="{{ url_for('generate_pgp_key') }}"
+                      onsubmit="return confirm('Generate a new PGP key? New files will use the new key; existing files remain decryptable with their original keys.');">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-shield-lock me-2"></i>Generate / Rotate Encryption Key
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>About</h6>
+            </div>
+            <div class="card-body">
+                <p class="mb-2">Configure core ICAP server, UI, and file encryption settings for the FakeICAP Web Interface.</p>
+                <ul class="small mb-0">
+                    <li>Changes take effect the next time the ICAP server is restarted.</li>
+                    <li>Only administrators can modify these settings.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

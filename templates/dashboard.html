@@ -11,163 +11,50 @@
     </div>
 </div>
 
-<!-- Server Status Cards -->
-<div class="row mb-4">
-    <div class="col-md-3">
-        <div class="card setting-card">
-            <div class="card-body text-center">
-                <i class="bi bi-server" style="font-size: 2rem; color: var(--bs-primary);"></i>
-                <h5 class="mt-2">Server Status</h5>
-                <p class="text-success fw-bold">ONLINE</p>
-                <small class="text-muted">Uptime: {{ server_status.uptime }}</small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card setting-card" style="cursor: pointer;" onclick="window.location.href='{{ url_for('processed_files') }}';">
-            <div class="card-body text-center">
-                <i class="bi bi-file-earmark-arrow-up" style="font-size: 2rem; color: var(--bs-success);"></i>
-                <h5 class="mt-2">Files Processed Today</h5>
-                <p class="fw-bold">{{ server_status.files_processed }}</p>
-                <small class="text-muted">Click to view details</small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card setting-card">
-            <div class="card-body text-center">
-                <i class="bi bi-clock-history" style="font-size: 2rem; color: var(--bs-info);"></i>
-                <h5 class="mt-2">Last File</h5>
-                <p class="fw-bold">{{ server_status.last_file }}</p>
-                <small class="text-muted">Recent activity</small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card setting-card">
-            <div class="card-body text-center">
-                <i class="bi bi-shield-check" style="font-size: 2rem; color: var(--bs-warning);"></i>
-                <h5 class="mt-2">Security</h5>
-                <p class="text-success fw-bold">SECURE</p>
-                <small class="text-muted">All systems normal</small>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Settings Form -->
+<!-- Active Connections + Quick Actions + System Info -->
 <div class="row">
     <div class="col-lg-8">
-        <div class="card">
+        <div class="card mb-4">
             <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-gear me-2"></i>ICAP Server Settings</h5>
+                <h5 class="mb-0"><i class="bi bi-diagram-3 me-2"></i>Active Connections</h5>
             </div>
             <div class="card-body">
-                <form method="POST" action="{{ url_for('update_settings') }}">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="server_host" class="form-label">Server Host</label>
-                                <input type="text" class="form-control" id="server_host" name="server_host" 
-                                       value="{{ settings.server_host }}" required>
-                                <div class="form-text">IP address or hostname for the ICAP server</div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="server_port" class="form-label">Server Port</label>
-                                <input type="number" class="form-control" id="server_port" name="server_port" 
-                                       value="{{ settings.server_port }}" min="1" max="65535" required>
-                                <div class="form-text">Port for ICAP server (default: 1344)</div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="max_file_size" class="form-label">Max File Size (bytes)</label>
-                                <input type="number" class="form-control" id="max_file_size" name="max_file_size" 
-                                       value="{{ settings.max_file_size }}" min="1024" required>
-                                <div class="form-text">Maximum file size to accept (default: 52428800 = 50MB)</div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="file_timeout" class="form-label">File Timeout (seconds)</label>
-                                <input type="number" class="form-control" id="file_timeout" name="file_timeout" 
-                                       value="{{ settings.file_timeout }}" min="5" max="300" required>
-                                <div class="form-text">Timeout for file reception (default: 15)</div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="theme" class="form-label">Theme</label>
-                                <select class="form-select" id="theme" name="theme">
-                                    <option value="light" {% if settings.theme == 'light' %}selected{% endif %}>Light Mode</option>
-                                    <option value="dark" {% if settings.theme == 'dark' %}selected{% endif %}>Dark Mode</option>
-                                </select>
-                                <div class="form-text">Choose your preferred theme</div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="accent_color" class="form-label">Accent Color</label>
-                                <select class="form-select" id="accent_color" name="accent_color">
-                                    <option value="orange" {% if settings.accent_color == 'orange' %}selected{% endif %}>Orange</option>
-                                    <option value="blue" {% if settings.accent_color == 'blue' %}selected{% endif %}>Blue</option>
-                                    <option value="green" {% if settings.accent_color == 'green' %}selected{% endif %}>Green</option>
-                                    <option value="purple" {% if settings.accent_color == 'purple' %}selected{% endif %}>Purple</option>
-                                    <option value="red" {% if settings.accent_color == 'red' %}selected{% endif %}>Red</option>
-                                </select>
-                                <div class="form-text">Primary accent color for the interface</div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6 col-lg-4">
-                            <div class="mb-3">
-                                <label for="log_max_bytes" class="form-label">Log Max Size (bytes)</label>
-                                <input type="number" class="form-control" id="log_max_bytes" name="log_max_bytes" 
-                                       value="{{ settings.log_max_bytes or '5242880' }}" min="1048576" step="1048576" required>
-                                <div class="form-text">Maximum log file size before rotation (default: 5242880 = 5MB)</div>
-                            </div>
-                        </div>
-                        <div class="col-md-6 col-lg-4">
-                            <div class="mb-3">
-                                <label for="log_backup_count" class="form-label">Log Backup Count</label>
-                                <input type="number" class="form-control" id="log_backup_count" name="log_backup_count" 
-                                       value="{{ settings.log_backup_count or '10' }}" min="1" max="50" required>
-                                <div class="form-text">Number of backup log files to keep (default: 10)</div>
-                            </div>
-                        </div>
-                        <div class="col-md-6 col-lg-4">
-                            <div class="mb-3">
-                                <label for="file_history_days" class="form-label">File History Days</label>
-                                <input type="number" class="form-control" id="file_history_days" name="file_history_days" 
-                                       value="{{ settings.file_history_days or '30' }}" min="1" max="365" required>
-                                <div class="form-text">Days to keep file processing history (default: 30)</div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-save me-2"></i>Save Settings
-                        </button>
-                        <button type="button" class="btn btn-outline-secondary" onclick="location.reload()">
-                            <i class="bi bi-arrow-clockwise me-2"></i>Reset
-                        </button>
-                    </div>
-                </form>
+                {% if server_status.connections and server_status.connections|length > 0 %}
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Client</th>
+                                <th>Filename</th>
+                                <th class="text-end">Bytes</th>
+                                <th class="text-end">Chunks</th>
+                                <th class="text-end">Idle (s)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for conn in server_status.connections %}
+                            <tr>
+                                <td>{{ conn.client }}</td>
+                                <td>{{ conn.filename }}</td>
+                                <td class="text-end">{{ conn.bytes }}</td>
+                                <td class="text-end">{{ conn.chunks }}</td>
+                                <td class="text-end">{{ conn.age_seconds }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">No active connections at this time.</p>
+                {% endif %}
+            </div>
+            <div class="card-footer small text-muted d-flex justify-content-between">
+                <span>Active transfers: {{ server_status.active_transfers }}</span>
+                <span>Uptime: <span id="uptime-display" data-uptime-seconds="{{ server_status.uptime_seconds }}">{{ server_status.uptime }}</span></span>
             </div>
         </div>
     </div>
-    
+
     <div class="col-lg-4">
         <!-- Quick Actions -->
         <div class="card mb-4">
@@ -175,13 +62,27 @@
                 <h6 class="mb-0"><i class="bi bi-lightning me-2"></i>Quick Actions</h6>
             </div>
             <div class="card-body">
+                {% set role = session.get('role') or 'FULL_ACCESS' %}
+                {% set is_admin = session.get('is_admin') %}
                 <div class="d-grid gap-2">
+                    {% if is_admin %}
                     <button class="btn btn-outline-primary" onclick="restartServer()">
                         <i class="bi bi-arrow-clockwise me-2"></i>Restart ICAP Server
                     </button>
-                    <button class="btn btn-outline-success" onclick="viewLogs()">
+                    {% endif %}
+
+                    {% if is_admin or role in ['FULL_ACCESS', 'LOG_VIEWER'] %}
+                    <a class="btn btn-outline-success" href="{{ url_for('logs') }}">
                         <i class="bi bi-file-text me-2"></i>View Server Logs
-                    </button>
+                    </a>
+                    {% endif %}
+
+                    {% if is_admin or role in ['FULL_ACCESS', 'FILE_DOWNLOAD'] %}
+                    <a class="btn btn-outline-secondary" href="{{ url_for('processed_files') }}">
+                        <i class="bi bi-folder me-2"></i>View Files
+                    </a>
+                    {% endif %}
+
                     <button class="btn btn-outline-info" onclick="testConnection()">
                         <i class="bi bi-wifi me-2"></i>Test Connection
                     </button>
@@ -189,7 +90,7 @@
             </div>
         </div>
         
-        <!-- System Info -->
+        <!-- System Information -->
         <div class="card">
             <div class="card-header">
                 <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>System Information</h6>
@@ -224,16 +125,66 @@
 
 {% block extra_js %}
 <script>
-function restartServer() {
-    if (confirm('Are you sure you want to restart the ICAP server?')) {
-        // Show loading state
-        showNotification('Restarting ICAP server...', 'info');
-        
-        // Simulate server restart
-        setTimeout(() => {
-            showNotification('ICAP server restarted successfully!', 'success');
-        }, 2000);
+// Live uptime updater
+document.addEventListener('DOMContentLoaded', function() {
+    const uptimeEl = document.getElementById('uptime-display');
+    if (!uptimeEl) return;
+
+    let totalSeconds = parseInt(uptimeEl.getAttribute('data-uptime-seconds') || '0', 10) || 0;
+
+    function formatUptime(seconds) {
+        const days = Math.floor(seconds / 86400);
+        let rem = seconds % 86400;
+        const hours = Math.floor(rem / 3600);
+        rem = rem % 3600;
+        const minutes = Math.floor(rem / 60);
+        const secs = rem % 60;
+
+        const hh = hours.toString().padStart(2, '0');
+        const mm = minutes.toString().padStart(2, '0');
+        const ss = secs.toString().padStart(2, '0');
+
+        if (days > 0) {
+            return `${days}d ${hh}:${mm}:${ss}`;
+        }
+        return `${hh}:${mm}:${ss}`;
     }
+
+    uptimeEl.textContent = formatUptime(totalSeconds);
+
+    setInterval(function() {
+        totalSeconds += 1;
+        uptimeEl.textContent = formatUptime(totalSeconds);
+    }, 1000);
+});
+
+function restartServer() {
+    if (!confirm('Are you sure you want to restart the ICAP server?')) {
+        return;
+    }
+
+    showNotification('Restarting ICAP server...', 'info');
+
+    fetch('/restart_icap', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    }).then(response => {
+        if (!response.ok) {
+            throw new Error('HTTP ' + response.status);
+        }
+        return response.json();
+    }).then(data => {
+        if (data && data.status === 'ok') {
+            showNotification('ICAP server restarted successfully.', 'success');
+        } else {
+            const msg = (data && data.message) || 'Unknown error restarting ICAP server.';
+            showNotification(msg, 'error');
+        }
+    }).catch(err => {
+        showNotification('Failed to restart ICAP server: ' + err, 'error');
+    });
 }
 
 function viewLogs() {
@@ -257,19 +208,25 @@ function showNotification(message, type) {
     }
 }
 
-// Apply theme changes immediately
-document.getElementById('theme').addEventListener('change', function() {
-    document.documentElement.setAttribute('data-bs-theme', this.value);
-    localStorage.setItem('theme', this.value);
-    const icon = document.getElementById('theme-icon');
-    icon.className = this.value === 'light' ? 'bi bi-moon-stars-fill' : 'bi bi-sun-fill';
-});
+// Apply theme changes immediately (only if the control exists on this page)
+const themeSelect = document.getElementById('theme');
+if (themeSelect) {
+    themeSelect.addEventListener('change', function() {
+        document.documentElement.setAttribute('data-bs-theme', this.value);
+        localStorage.setItem('theme', this.value);
+        const icon = document.getElementById('theme-icon');
+        if (icon) {
+            icon.className = this.value === 'light' ? 'bi bi-moon-stars-fill' : 'bi bi-sun-fill';
+        }
+    });
+}
 
-// Apply accent color changes immediately
-document.getElementById('accent_color').addEventListener('change', function() {
-    if (window.applyAccentColor) {
+// Apply accent color changes immediately (only if the control exists on this page)
+const accentSelect = document.getElementById('accent_color');
+if (accentSelect && window.applyAccentColor) {
+    accentSelect.addEventListener('change', function() {
         window.applyAccentColor(this.value);
-    }
-});
+    });
+}
 </script>
 {% endblock %}
