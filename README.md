@@ -95,16 +95,48 @@ This implementation is specifically designed to overcome common ICAP connectivit
 
 ## Configuration
 
-### Server Settings
-- **Host**: `YOUR_SERVER_IP` (configurable in code)
-- **Port**: `1344` (standard ICAP port)
-- **Timeout**: 15 seconds for file content
-- **Max File Size**: 50MB (safety limit)
+FakeICAP supports multiple configuration methods with the following priority:
 
-### File Handling
-- **Filename Sanitization**: Removes dangerous characters
-- **Conflict Resolution**: Adds counter suffixes for duplicate filenames
-- **Size Limits**: Prevents memory exhaustion with large files
+### 1. Local Config File (Highest Priority)
+For local development, create a `config.py` file:
+
+```bash
+cp config.local.example.py config.py
+# Edit config.py with your settings
+```
+
+**Example `config.py`:**
+```python
+SERVER_HOST = '192.168.1.100'  # Your server IP
+SERVER_PORT = 1344               # ICAP port
+MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB limit
+FILE_TIMEOUT = 15                # Timeout in seconds
+```
+
+### 2. Database Settings (Web Interface)
+Configure through the web dashboard at `http://localhost:5000`:
+- **Server Host:** IP address for ICAP server
+- **Server Port:** Port for ICAP server (default: 1344)
+- **File Settings:** Size limits and timeouts
+- **Logging:** Rotation and retention policies
+
+### 3. Default Values (Lowest Priority)
+If no configuration is found, these defaults are used:
+- **Host:** `0.0.0.0` (all interfaces)
+- **Port:** `1344`
+- **Max File Size:** 50MB
+- **Timeout:** 15 seconds
+
+### Configuration Priority
+1. **config.py** file (local development)
+2. **Database settings** (web interface)
+3. **Default values** (fallback)
+
+### Security Notes
+- `config.py` is automatically ignored by Git
+- Keep local configuration files private
+- Use different configs for development vs production
+- Database settings work well for team environments
 
 ## GoAnywhere MFT Integration
 

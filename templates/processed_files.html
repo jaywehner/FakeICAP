@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block title %}Processed Files - FakeICAP{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-file-earmark-arrow-up me-2"></i>Processed Files</h2>
+    <div>
+        <span class="text-muted">History: {{ history_days }} days</span>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-funnel me-2"></i>Filters</h5>
+    </div>
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-4">
+                <label for="date" class="form-label">Date</label>
+                <select class="form-select" id="date" name="date" onchange="this.form.submit()">
+                    <option value="">All Dates</option>
+                    {% for date_info in dates %}
+                    <option value="{{ date_info.date_processed }}" {% if date_info.date_processed == selected_date %}selected{% endif %}>
+                        {{ date_info.date_processed }} ({{ date_info.file_count }} files)
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label for="search" class="form-label">Search Filename</label>
+                <input type="text" class="form-control" id="search" name="search" 
+                       value="{{ search_term }}" placeholder="Enter filename to search...">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search me-1"></i>Search
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Files Table -->
+{% if files %}
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="bi bi-list-ul me-2"></i>
+            Files {% if selected_date %}for {{ selected_date }}{% endif %}
+            {% if search_term %}matching "{{ search_term }}"{% endif %}
+            <span class="badge bg-primary ms-2">{{ files|length }}</span>
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Original Filename</th>
+                        <th>Size</th>
+                        <th>Client IP</th>
+                        <th>Processed At</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for file in files %}
+                    <tr>
+                        <td>
+                            <i class="bi bi-file-earmark me-2"></i>
+                            <strong>{{ file.original_filename }}</strong>
+                            {% if file.file_hash %}
+                                <i class="bi bi-shield-check text-success ms-2" title="File integrity verified"></i>
+                            {% endif %}
+                        </td>
+                        <td>{{ "{:,}".format(file.file_size) }} bytes</td>
+                        <td>
+                            <code>{{ file.client_ip or 'Unknown' }}</code>
+                        </td>
+                        <td>
+                            <small>{{ file.processed_at }}</small>
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a href="{{ url_for('download_processed_file', file_id=file.id) }}" 
+                                   class="btn btn-sm btn-outline-success" title="Download File">
+                                    <i class="bi bi-download"></i>
+                                </a>
+                                <button class="btn btn-sm btn-outline-info" 
+                                        onclick="showFileDetails('{{ file.id }}')"
+                                        title="File Details">
+                                    <i class="bi bi-info-circle"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="text-center py-5">
+    <i class="bi bi-file-earmark-x" style="font-size: 3rem; color: var(--bs-secondary);"></i>
+    <h5 class="mt-3">No Files Found</h5>
+    <p class="text-muted">
+        {% if search_term %}
+            No files found matching "{{ search_term }}"
+        {% elif selected_date %}
+            No files processed on {{ selected_date }}
+        {% else %}
+            No files have been processed yet
+        {% endif %}
+    </p>
+</div>
+{% endif %}
+
+<!-- File Details Modal -->
+<div class="modal fade" id="fileDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">File Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="fileDetailsContent">
+                    <!-- Content will be loaded here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showFileDetails(fileId) {
+    // Fetch file details from the server
+    fetch(`/file_details/${fileId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                // Show error message
+                const content = `
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        ${data.error}
+                    </div>
+                `;
+                document.getElementById('fileDetailsContent').innerHTML = content;
+            } else {
+                // Display file details
+                const content = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>Record ID:</strong> ${data['Record ID'] || 'N/A'}<br>
+                            <strong>Original Filename:</strong> ${data['Filename'] || 'N/A'}<br>
+                            <strong>Saved Filename:</strong> ${data['Corresponding File'] || 'N/A'}<br>
+                            <strong>File Size:</strong> ${data['File Size'] || 'N/A'}<br>
+                            <strong>File Hash:</strong> <code style="font-size: 0.8em;">${data['File Hash'] || 'N/A'}</code>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Client IP:</strong> ${data['Client IP'] || 'N/A'}<br>
+                            <strong>User Agent:</strong> <span style="font-size: 0.8em;">${data['User Agent'] || 'N/A'}</span><br>
+                            <strong>Processed At:</strong> ${data['Timestamp'] || 'N/A'}<br>
+                            <strong>Method:</strong> ${data['Method'] || 'N/A'}<br>
+                            <strong>Status:</strong> <span class="badge bg-success">${data['Status'] || 'N/A'}</span>
+                        </div>
+                    </div>
+                    ${data['Directory'] ? `
+                    <div class="mt-3">
+                        <strong>Directory:</strong> <code>${data['Directory']}</code><br>
+                        <strong>Full File Path:</strong> <code style="font-size: 0.8em;">${data['Full File Path']}</code>
+                    </div>
+                    ` : ''}
+                `;
+                document.getElementById('fileDetailsContent').innerHTML = content;
+            }
+            new bootstrap.Modal(document.getElementById('fileDetailsModal')).show();
+        })
+        .catch(error => {
+            console.error('Error fetching file details:', error);
+            const content = `
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Error loading file details: ${error.message}
+                </div>
+            `;
+            document.getElementById('fileDetailsContent').innerHTML = content;
+            new bootstrap.Modal(document.getElementById('fileDetailsModal')).show();
+        });
+}
+
+// Clear search
+function clearSearch() {
+    document.getElementById('search').value = '';
+    document.getElementById('date').value = '';
+    window.location.href = '{{ url_for("processed_files") }}';
+}
+</script>
+{% endblock %}

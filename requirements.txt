@@ -1,3 +1,16 @@
-# FakeICAP Server
+# FakeICAP Server Requirements
+
+# Core ICAP Server (minimal_icap.py)
 # No external dependencies required - uses only Python standard library
 # Python 3.6+ compatible
+
+# Web Frontend Dependencies (web_app.py)
+Flask==2.3.3
+Flask-Bcrypt==1.0.1
+
+# Optional: For production deployment
+gunicorn==21.2.0
+
+# Development dependencies (optional)
+pytest==7.4.2
+pytest-flask==1.2.0

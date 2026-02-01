@@ -1,0 +1,293 @@
+<!-- Custom Notification Container -->
+<div id="notification-container" style="position: fixed; top: 20px; right: 20px; z-index: 9999; max-width: 400px;">
+</div>
+
+<script>
+class NotificationManager {
+    constructor() {
+        this.container = document.getElementById('notification-container');
+        if (!this.container) {
+            this.container = document.createElement('div');
+            this.container.id = 'notification-container';
+            this.container.style.position = 'fixed';
+            this.container.style.top = '20px';
+            this.container.style.right = '20px';
+            this.container.style.zIndex = '9999';
+            this.container.style.maxWidth = '400px';
+            document.body.appendChild(this.container);
+        }
+    }
+    
+    show(message, type = 'info', duration = 3000, autoHide = true) {
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type} notification-slide-in`;
+        notification.innerHTML = `
+            <div class="notification-header">
+                <span class="notification-icon">
+                    ${this.getIcon(type)}
+                </span>
+                <span class="notification-title">${this.getTitle(type)}</span>
+                <button type="button" class="notification-close" onclick="this.hide(this)" aria-label="Close">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="notification-content">
+                ${message}
+            </div>
+        `;
+        
+        this.container.appendChild(notification);
+        
+        // Auto-hide after duration
+        if (autoHide) {
+            setTimeout(() => {
+                this.hide(notification);
+            }, duration);
+        }
+        
+        // Add slide-in animation
+        setTimeout(() => {
+            notification.classList.add('notification-slide-in');
+        }, 10);
+        
+        return notification;
+    }
+    
+    hide(notification) {
+        if (notification && notification.parentNode) {
+            notification.classList.remove('notification-slide-in');
+            notification.classList.add('notification-slide-out');
+            
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 300);
+        }
+    }
+    
+    hideAll() {
+        const notifications = this.container.querySelectorAll('.notification');
+        notifications.forEach(notification => {
+            this.hide(notification);
+        });
+    }
+    
+    getIcon(type) {
+        const icons = {
+            'success': '<i class="bi bi-check-circle-fill"></i>',
+            'error': '<i class="bi bi-x-circle-fill"></i>',
+            'warning': '<i class="bi bi-exclamation-triangle-fill"></i>',
+            'info': '<i class="bi bi-info-circle-fill"></i>',
+            'primary': '<i class="bi bi-info-circle-fill"></i>',
+            'secondary': '<i class="bi bi-info-circle-fill"></i>'
+        };
+        return icons[type] || icons['info'];
+    }
+    
+    getTitle(type) {
+        const titles = {
+            'success': 'Success',
+            'error': 'Error',
+            'warning': 'Warning',
+            'info': 'Information',
+            'priority': 'Info',
+            'secondary': 'Info'
+        };
+        return titles[type] || titles['info'];
+    }
+}
+
+// Global notification manager instance
+window.notificationManager = new NotificationManager();
+
+// Override Flask's default flash messages
+document.addEventListener('DOMContentLoaded', function() {
+    // Override Bootstrap alert function
+    window.alert = function(message) {
+        window.notificationManager.show(message, 'info');
+    };
+    
+    // Override Bootstrap alert if available
+    if (window.bootstrap && window.bootstrap.Alert) {
+        const originalAlert = window.bootstrap.Alert.prototype.constructor;
+        window.bootstrap.Alert.prototype.constructor = function(element, options) {
+            originalAlert.call(this, element, options);
+            
+            // Auto-hide after 3 seconds
+            setTimeout(() => {
+                this.close();
+            }, 3000);
+        };
+    }
+});
+</script>
+
+<style>
+.notification {
+    background: white;
+    border-left: 4px solid var(--bs-primary);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    margin-bottom: 10px;
+    overflow: hidden;
+    transform: translateX(100%);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0;
+}
+
+.notification-slide-in {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.notification-slide-out {
+    transform: translateX(100%);
+    opacity: 0;
+}
+
+.notification-header {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    background: var(--bs-gray-100);
+    border-bottom: 1px solid var(--bs-gray-200);
+    font-weight: 600;
+    color: var(--bs-gray-800);
+}
+
+.notification-content {
+    padding: 16px;
+    color: var(--bs-gray-700);
+    line-height: 1.5;
+}
+
+.notification-icon {
+    margin-right: 8px;
+    font-size: 18px;
+}
+
+.notification-title {
+    flex-grow: 1;
+    font-weight: 600;
+}
+
+.notification-close {
+    background: none;
+    border: none;
+    font-size: 18px;
+    color: var(--bs-gray-500);
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.notification-close:hover {
+    opacity: 1;
+}
+
+/* Notification types */
+.notification-success {
+    border-left-color: var(--bs-success);
+}
+
+.notification-success .notification-icon {
+    color: var(--bs-success);
+}
+
+.notification-success .notification-header {
+    background-color: var(--bs-success);
+    color: white;
+}
+
+.notification-error {
+    border-left-color: var(--bs-danger);
+}
+
+.notification-error .notification-icon {
+    color: var(--bs-danger);
+}
+
+.notification-error .notification-header {
+    background-color: var(--bs-bootstrap-danger);
+    color: white;
+}
+
+.notification-warning {
+    border-left-color: var(--bs-warning);
+}
+
+.notification-warning .notification-icon {
+    color: var(--bs-warning);
+}
+
+.notification-warning .notification-header {
+    background-color: var(--bs-warning);
+    color: white;
+}
+
+.notification-info {
+    border-left-color: var(--bs-info);
+}
+
+.notification-info .notification-icon {
+    color: var(--bs-info);
+}
+
+.notification-info .notification-header {
+    background-color: var(--bs-info);
+    color: white;
+}
+
+.notification-primary {
+    border-left-color: var(--bs-primary);
+}
+
+.notification-primary .notification-icon {
+    color: var(--bs-primary);
+}
+
+.notification-primary .notification-header {
+    background-color: var(--bs-primary);
+    color: white;
+}
+
+.notification-secondary {
+    border-left-color: var(--bs-secondary);
+}
+
+.notification-secondary .notification-icon {
+    color: var(--bs-secondary);
+}
+
+.notification-secondary .notification-header {
+    background-color: var(--bs-secondary);
+    color: white;
+}
+
+[data-bs-theme="dark"] .notification {
+    background: #2d3748;
+    color: #e9ecef;
+    border-left-color: var(--bs-primary);
+}
+
+[data-bs-theme="dark"] .notification-header {
+    background-color: var(--bs-gray-700);
+    color: #e9ecef;
+    border-bottom-color: #495057;
+}
+
+[data-bs-theme="dark"] .notification-content {
+    color: #e9ecef;
+}
+
+[data-bs-theme="dark"] .notification-title {
+    color: #e9ecef;
+}
+
+[data-bs-theme="dark"] .notification-close {
+    color: #adb5bd;
+}
+</style>

@@ -173,6 +173,17 @@ temp/
 .DS_Store
 Thumbs.db
 
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Configuration files (keep local settings private)
+config.py
+config.ini
+.env
+.env.local
+
 # Network configuration
 config.ini
 network.conf

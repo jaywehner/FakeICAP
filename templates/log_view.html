@@ -1,0 +1,306 @@
+{% extends "base.html" %}
+
+{% block title %}{{ filename }} - Log View{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="bi bi-file-earmark-text me-2"></i>{{ filename }}</h2>
+        <p class="text-muted mb-0">
+            Showing last {{ log_content|length }} lines
+            {% if log_content|length >= 200 %}
+                (limited to 200 lines for performance)
+            {% endif %}
+        </p>
+    </div>
+    <div>
+        <a href="{{ url_for('logs') }}" class="btn btn-outline-secondary me-2">
+            <i class="bi bi-arrow-left me-2"></i>Back to Logs
+        </a>
+        <a href="{{ url_for('download_log', filename=filename) }}" class="btn btn-success">
+            <i class="bi bi-download me-2"></i>Download
+        </a>
+    </div>
+</div>
+
+<!-- Log Content -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-code-slash me-2"></i>Log Content</h5>
+        <div>
+            <button class="btn btn-sm btn-outline-primary" id="autoRefreshBtn" onclick="toggleAutoRefresh()">
+                <i class="bi bi-arrow-repeat me-1"></i>
+                <span id="autoRefreshText">Auto Refresh: OFF</span>
+            </button>
+            <button class="btn btn-sm btn-outline-secondary" onclick="scrollToTop()">
+                <i class="bi bi-arrow-up"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-secondary" onclick="scrollToBottom()">
+                <i class="bi bi-arrow-down"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-info" onclick="refreshLog()">
+                <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+            </button>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <pre id="logContent" style="height: 600px; overflow-y: auto; background-color: #1a1a1a; color: #e9ecef; font-family: 'Courier New', monospace; font-size: 12px; padding: 15px; margin: 0; white-space: pre-wrap; word-break: break-all;">{{ log_content|join('') }}</pre>
+    </div>
+</div>
+
+<!-- Log Statistics -->
+<div class="row mt-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="bi bi-file-text" style="font-size: 1.5rem; color: var(--bs-primary);"></i>
+                <h6 class="mt-2" data-stat="total_lines">{{ stats.total_lines }}</h6>
+                <p class="text-muted mb-0">Lines Displayed</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="bi bi-exclamation-triangle" style="font-size: 1.5rem; color: var(--bs-danger);"></i>
+                <h6 class="mt-2" data-stat="error_count">{{ stats.error_count }}</h6>
+                <p class="text-muted mb-0">Errors</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="bi bi-exclamation-circle" style="font-size: 1.5rem; color: var(--bs-warning);"></i>
+                <h6 class="mt-2" data-stat="warning_count">{{ stats.warning_count }}</h6>
+                <p class="text-muted mb-0">Warnings</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="bi bi-info-circle" style="font-size: 1.5rem; color: var(--bs-info);"></i>
+                <h6 class="mt-2" data-stat="info_count">{{ stats.info_count }}</h6>
+                <p class="text-muted mb-0">Info Messages</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Search and Filter -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h6 class="mb-0"><i class="bi bi-search me-2"></i>Search & Filter</h6>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text">
+                        <i class="bi bi-search"></i>
+                    </span>
+                    <input type="text" class="form-control" id="searchInput" placeholder="Search log content..." onkeyup="filterLogs()">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="levelFilter" onchange="filterLogs()">
+                    <option value="">All Levels</option>
+                    <option value="ERROR">Errors Only</option>
+                    <option value="WARNING">Warnings Only</option>
+                    <option value="INFO">Info Only</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-outline-secondary" onclick="clearFilters()">
+                    <i class="bi bi-x-circle me-1"></i>Clear Filters
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let autoRefresh = false;
+let autoRefreshInterval;
+let lastContentLength = 0;
+
+function toggleAutoRefresh() {
+    autoRefresh = !autoRefresh;
+    const button = document.getElementById('autoRefreshText');
+    
+    if (autoRefresh) {
+        button.textContent = 'Auto Refresh: ON';
+        startAutoRefresh();
+    } else {
+        button.textContent = 'Auto Refresh: OFF';
+        stopAutoRefresh();
+    }
+}
+
+function startAutoRefresh() {
+    autoRefreshInterval = setInterval(() => {
+        refreshLog(false); // Don't show notification for auto-refresh
+    }, 3000); // Refresh every 3 seconds
+}
+
+function stopAutoRefresh() {
+    clearInterval(autoRefreshInterval);
+}
+
+function refreshLog(showNotification = true) {
+    fetch(`/logs/view/{{ filename }}?refresh=${Date.now()}`)
+        .then(response => response.text())
+        .then(html => {
+            // Extract the log content from the response
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const newContent = doc.querySelector('#logContent');
+            
+            if (newContent) {
+                const currentContent = document.getElementById('logContent');
+                const wasAtBottom = currentContent.scrollTop >= currentContent.scrollHeight - currentContent.clientHeight - 10;
+                
+                currentContent.textContent = newContent.textContent;
+                
+                // Auto-scroll to bottom if user was already at bottom
+                if (wasAtBottom) {
+                    currentContent.scrollTop = currentContent.scrollHeight;
+                }
+                
+                // Update statistics
+                updateStatistics(doc);
+                
+                if (showNotification) {
+                    showNotificationMessage('Log refreshed', 'success');
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error refreshing log:', error);
+            if (showNotification) {
+                showNotificationMessage('Error refreshing log', 'error');
+            }
+        });
+}
+
+function updateStatistics(doc) {
+    // Update statistics if they exist in the response
+    const totalLines = doc.querySelector('[data-stat="total_lines"]');
+    const errorCount = doc.querySelector('[data-stat="error_count"]');
+    const warningCount = doc.querySelector('[data-stat="warning_count"]');
+    const infoCount = doc.querySelector('[data-stat="info_count"]');
+    
+    if (totalLines) {
+        document.querySelector('[data-stat="total_lines"]').textContent = totalLines.textContent;
+    }
+    if (errorCount) {
+        document.querySelector('[data-stat="error_count"]').textContent = errorCount.textContent;
+    }
+    if (warningCount) {
+        document.querySelector('[data-stat="warning_count"]').textContent = warningCount.textContent;
+    }
+    if (infoCount) {
+        document.querySelector('[data-stat="info_count"]').textContent = infoCount.textContent;
+    }
+}
+
+function scrollToTop() {
+    document.getElementById('logContent').scrollTop = 0;
+}
+
+function scrollToBottom() {
+    const logContent = document.getElementById('logContent');
+    logContent.scrollTop = logContent.scrollHeight;
+}
+
+function showNotificationMessage(message, type) {
+    if (window.notificationManager) {
+        window.notificationManager.show(message, type);
+    } else {
+        console.log(`[${type.toUpperCase()}] ${message}`);
+    }
+}
+
+// Auto-scroll to bottom on page load
+document.addEventListener('DOMContentLoaded', function() {
+    scrollToBottom();
+    
+    // Add keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        if (e.ctrlKey || e.metaKey) {
+            switch(e.key) {
+                case 'r':
+                    e.preventDefault();
+                    refreshLog();
+                    break;
+                case 'a':
+                    e.preventDefault();
+                    toggleAutoRefresh();
+                    break;
+            }
+        }
+    });
+});
+
+// Highlight search terms
+document.getElementById('searchInput').addEventListener('input', function() {
+    const searchTerm = this.value;
+    const logContent = document.getElementById('logContent');
+    
+    if (searchTerm) {
+        const text = logContent.textContent;
+        const regex = new RegExp(`(${searchTerm})`, 'gi');
+        
+        // Simple highlighting by wrapping in span
+        const highlightedText = text.replace(regex, '<mark style="background-color: rgba(253, 126, 20, 0.3); padding: 0;">$1</mark>');
+        
+        // Create a temporary div to hold the highlighted content
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = highlightedText;
+        
+        // Replace content while preserving scroll position
+        const scrollTop = logContent.scrollTop;
+        logContent.innerHTML = highlightedText;
+        logContent.scrollTop = scrollTop;
+    } else {
+        // Remove highlighting
+        location.reload(); // Simple way to reset highlighting
+    }
+});
+</script>
+
+<style>
+#logContent {
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+}
+
+[data-bs-theme="dark"] #logContent {
+    background-color: #0d1117 !important;
+    color: #c9d1d9 !important;
+    border-color: #30363d !important;
+}
+
+/* Search highlighting */
+mark {
+    background-color: rgba(253, 126, 20, 0.3) !important;
+    padding: 0 !important;
+    border-radius: 2px;
+}
+
+/* Smooth scrolling */
+#logContent {
+    scroll-behavior: smooth;
+}
+
+/* Auto-refresh indicator */
+#autoRefreshBtn.active {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+    color: white;
+}
+</style>
+{% endblock %}
